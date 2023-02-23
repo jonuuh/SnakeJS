@@ -3,6 +3,9 @@ const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 const SNAKE_COLOR = "#ffffff";
 const APPLE_COLOR = "#ffffff";
+const xPositions = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
+const yPositions = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
+const ALL_COORD_PAIRS = xPositions.flatMap((d) => yPositions.map((v) => [d, v]));
 let snakeSegmentCoords = [];
 let appleCoords = [];
 let headX = 320;
@@ -52,6 +55,7 @@ document.addEventListener("keydown", (event) => {
             }
             break;
 
+        // For debugging
         case "Backquote":
             console.log(snakeSegmentCoords);
             break;
@@ -150,44 +154,29 @@ function drawApple(x, y) {
     ctx.fillRect(x + 5, y + 5, 30, 30);
     // Store the coords of the apple to be able to detect when the snake runs over it
     appleCoords = [x, y];
-    console.log(`%c drew apple.`, "color: #00ff00");
+    console.log(`%c drew apple.`, "color: #ffff00");
 }
 
 // ~~ RANDOM APPLE GENERATION ~~
 function generateApple() {
-    // Possible apple coordinates
-    const xPositions = [40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
-    const yPositions = [40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
-
-    // Random apple coordinates
-    let appleCoords = [
-        xPositions[Math.floor(Math.random() * xPositions.length)],
-        yPositions[Math.floor(Math.random() * yPositions.length)],
-    ];
-
-    // Continue randomly generating new apple coords as long as the apple is trying to generate inside the snake
-    // Keeping track of tries is a failsafe for a rare bug (never reproduced) which otherwise causes an infinite loop here
-    // TODO: this is a horrible solution, find a better one
-    let tries = 0;
-    while (!isSpotEmpty(appleCoords) && tries < 1000) {
-        console.log(`%c failed to draw apple, trying again.`, "color: #ff0000");
-        tries++;
-        appleCoords = [
-            xPositions[Math.floor(Math.random() * xPositions.length)],
-            yPositions[Math.floor(Math.random() * yPositions.length)],
-        ];
-    }
-
-    // Draw the apple once an empty spot is found
+    // Filter out all the spots on the grid containing a snake segment to get an array of only empty spots
+    const emptySpots = ALL_COORD_PAIRS.flatMap((c) => (c = isSpotEmpty(c) ? [c] : []));
+    // Random apple coordinates (pick a random element from emptySpots coord array)
+    let appleCoords = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+    // Draw the apple at the randomly selected coords
     drawApple(appleCoords[0], appleCoords[1]);
 }
 
 // ~~ APPLE COLLISION DETECTION ~~
 function isAppleEaten() {
-    if (areArraysEqual(snakeSegmentCoords[snakeSegmentCoords.length - 1], appleCoords)) {
+    // Check if the coords of the head match the coords of the apple
+    if (areArraysEqual([headX, headY], appleCoords)) {
         console.log(`%c ate apple.`, "color: #00ff00");
+        // Play apple pickup sound
         playAudio(new Audio("./apple_pickup.mp3"));
+        // Update scoreboard
         document.getElementById("scoreboard").innerHTML = `SCORE: ${++snakeLength - 3}`;
+        // Generate a new apple
         generateApple();
     }
 }
@@ -196,33 +185,38 @@ function isAppleEaten() {
 function checkForSnakeCollisions() {
     let collision = false;
 
+    // Handle wall collisions
     function wallCollision() {
         console.log(`%c wall collision.`, "color: #ff0000");
         return true;
     }
 
-    function selfCollision(futureHeadCoords, dir) {
+    // Handle self collisions
+    // - checks if the spot right in front of the snake's head is a snake segment
+    // - takes the future coords of the snake head based on the current direction
+    function selfCollision(futureHeadCoords) {
         for (const coords of snakeSegmentCoords) {
             if (areArraysEqual(coords, futureHeadCoords)) {
-                console.log(`%c ${dir} self-collision.`, "color: #ff0000");
+                console.log(`%c ${direction} self-collision.`, "color: #ff0000");
                 return true;
             }
         }
         return false;
     }
 
+    // Check for collisions based on the current direction
     switch (direction) {
         case "+x":
-            collision = headX === 640 ? wallCollision() : selfCollision([headX + 40, headY], direction);
+            collision = headX === 640 ? wallCollision() : selfCollision([headX + 40, headY]);
             break;
         case "-x":
-            collision = headX === 0 ? wallCollision() : selfCollision([headX - 40, headY], direction);
+            collision = headX === 0 ? wallCollision() : selfCollision([headX - 40, headY]);
             break;
         case "+y":
-            collision = headY === 560 ? wallCollision() : selfCollision([headX, headY + 40], direction);
+            collision = headY === 560 ? wallCollision() : selfCollision([headX, headY + 40]);
             break;
         case "-y":
-            collision = headY === 0 ? wallCollision() : selfCollision([headX, headY - 40], direction);
+            collision = headY === 0 ? wallCollision() : selfCollision([headX, headY - 40]);
             break;
         default:
             break;
@@ -257,7 +251,7 @@ function moveSnake() {
 
     // Draw new snake segment at head coords
     drawSnakeSegment(headX, headY);
-    // Check if apple was eaten (as a result of the snake moving)
+    // Check if apple was eaten (as a result of the new snake "head" being created)
     isAppleEaten();
 
     // If the number of snake segment coordinate pairs in the queue is greater than the
@@ -283,13 +277,14 @@ function gameOver(fpsThrottle) {
 // ~~ MAIN ANIMATION LOOP ~~
 function animationLoop() {
     const fpsThrottle = setTimeout(() => {
+        // Animate one frame
         requestAnimationFrame(animationLoop);
-        // update snake direction
+        // Update snake direction
         if (direction !== nextDirection) {
             direction = nextDirection;
             playAudio(new Audio("./blip.mp3"));
         }
-    }, 1000 / 7);
+    }, 1000 / 7); // 7 FPS
 
     // If the game is active and there are no collisions, move the snake, otherwise end the game
     gameIsActive && !checkForSnakeCollisions() ? moveSnake() : gameOver(fpsThrottle);
