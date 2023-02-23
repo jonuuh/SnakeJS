@@ -3,9 +3,12 @@ const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 const SNAKE_COLOR = "#ffffff";
 const APPLE_COLOR = "#ffffff";
-const xPositions = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
-const yPositions = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
-const ALL_COORD_PAIRS = xPositions.flatMap((d) => yPositions.map((v) => [d, v]));
+const X_POSITIONS = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
+const Y_POSITIONS = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
+const ALL_COORD_PAIRS = X_POSITIONS.flatMap((d) => Y_POSITIONS.map((v) => [d, v]));
+const audioThread1 = new Audio();
+const audioThread2 = new Audio();
+const audioThread3 = new Audio();
 let snakeSegmentCoords = [];
 let appleCoords = [];
 let headX = 320;
@@ -95,9 +98,18 @@ document.getElementById("volume").onclick = () => {
     }
 };
 
-function playAudio(audio) {
+function playAudio(src) {
     if (hasVolume) {
-        audio.play();
+        if (audioThread1.paused) {
+            audioThread1.src = src;
+            audioThread1.play();
+        } else if (audioThread2.paused) {
+            audioThread2.src = src;
+            audioThread2.play();
+        } else {
+            audioThread3.src = src;
+            audioThread3.play();
+        }
     }
 }
 
@@ -168,7 +180,7 @@ function isAppleEaten() {
     if (areArraysEqual([headX, headY], appleCoords)) {
         console.log(`%c ate apple.`, "color: #00ff00");
         // Play apple pickup sound
-        playAudio(new Audio("./apple_pickup.mp3"));
+        playAudio("./apple_pickup.mp3");
         // Update scoreboard
         document.getElementById("scoreboard").innerHTML = `SCORE: ${++snakeLength - 3}`;
         // Generate a new apple
@@ -261,7 +273,7 @@ function moveSnake() {
 // ~~ HANDLE GAME OVER ~~
 function gameOver(fpsThrottle) {
     // Play death sound
-    playAudio(new Audio("./death.mp3"));
+    playAudio("./death.mp3");
     // Place transparent gray overlay over the canvas
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -277,7 +289,7 @@ function animationLoop() {
         // Update snake direction
         if (direction !== nextDirection) {
             direction = nextDirection;
-            playAudio(new Audio("./blip.mp3"));
+            playAudio("./blip.mp3");
         }
     }, 1000 / 7); // 7 FPS
 
