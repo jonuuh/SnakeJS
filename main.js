@@ -33,33 +33,28 @@ document.addEventListener("keydown", (event) => {
                 nextDirection = "+x";
             }
             break;
-
         case "KeyA":
         case "ArrowLeft":
             if (direction !== "+x") {
                 nextDirection = "-x";
             }
             break;
-
         case "KeyS":
         case "ArrowDown":
             if (direction !== "-y") {
                 nextDirection = "+y";
             }
             break;
-
         case "KeyW":
         case "ArrowUp":
             if (direction !== "+y") {
                 nextDirection = "-y";
             }
             break;
-
         // For debugging
         case "Backquote":
             console.log(snakeSegmentCoords);
             break;
-
         default:
             break;
     }
