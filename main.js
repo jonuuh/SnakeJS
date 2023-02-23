@@ -1,14 +1,14 @@
 // ~~ GLOBAL VARIABLES ~~
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
+const audioThread1 = new Audio();
+const audioThread2 = new Audio();
+const audioThread3 = new Audio();
 const SNAKE_COLOR = "#ffffff";
 const APPLE_COLOR = "#ffffff";
 const X_POSITIONS = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
 const Y_POSITIONS = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
 const ALL_COORD_PAIRS = X_POSITIONS.flatMap((d) => Y_POSITIONS.map((v) => [d, v]));
-const audioThread1 = new Audio();
-const audioThread2 = new Audio();
-const audioThread3 = new Audio();
 let snakeSegmentCoords = [];
 let appleCoords = [];
 let headX = 320;
