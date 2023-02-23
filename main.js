@@ -1,52 +1,105 @@
+// ~~ GLOBAL VARIABLES ~~
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
-
+const SNAKE_COLOR = "#ffffff";
+const APPLE_COLOR = "#ffffff";
 let snakeSegmentCoords = [];
 let appleCoords = [];
 let headX = 320;
 let headY = 280;
-let direction = null;
 let snakeLength = 3;
-let startGame = false;
-let score = 0;
+let direction = null;
+let nextDirection = null;
+let gameIsActive = false;
+let hasVolume = true;
+
+// ~~ GAME INITIALIZATION ~~
+function initGame() {
+    gameIsActive = true;
+    drawSnakeSegment(headX, headY);
+    generateApple();
+    animationLoop();
+}
 
 // ~~ KEYBOARD INPUT ~~
 document.addEventListener("keydown", (event) => {
-    console.log(`${event.key}, ${event.code} pressed.`);
-
     switch (event.code) {
         case "KeyD":
-            if (direction != "-x") {
-                direction = "+x";
+        case "ArrowRight":
+            if (direction !== "-x") {
+                nextDirection = "+x";
             }
             break;
+
         case "KeyA":
-            if (direction != "+x") {
-                direction = "-x";
+        case "ArrowLeft":
+            if (direction !== "+x") {
+                nextDirection = "-x";
             }
             break;
+
         case "KeyS":
-            if (direction != "-y") {
-                direction = "+y";
+        case "ArrowDown":
+            if (direction !== "-y") {
+                nextDirection = "+y";
             }
             break;
+
         case "KeyW":
-            if (direction != "+y") {
-                direction = "-y";
+        case "ArrowUp":
+            if (direction !== "+y") {
+                nextDirection = "-y";
             }
             break;
+
         case "Backquote":
             console.log(snakeSegmentCoords);
             break;
+
         default:
             break;
     }
 });
 
-function initGame() {
-    startGame = true;
-    drawSnakeSegment(headX, headY);
-    generateApple();
+// ~~ RESET GAME ~~
+document.getElementById("reset").onclick = () => {
+    if (!gameIsActive) {
+        // Reset variables
+        snakeSegmentCoords = [];
+        appleCoords = [];
+        headX = 320;
+        headY = 280;
+        snakeLength = 3;
+        direction = null;
+        nextDirection = null;
+        gameIsActive = false;
+
+        // Reset visuals
+        document.getElementById("scoreboard").innerHTML = "SCORE: 0";
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Restart game
+        initGame();
+    }
+};
+
+// ~~ VOLUME TOGGLE ~~
+document.getElementById("volume").onclick = () => {
+    hasVolume = !hasVolume;
+
+    if (hasVolume) {
+        document.getElementById("volume_off").style.visibility = "hidden";
+        document.getElementById("volume_on").style.visibility = "visible";
+    } else {
+        document.getElementById("volume_off").style.visibility = "visible";
+        document.getElementById("volume_on").style.visibility = "hidden";
+    }
+};
+
+function playAudio(audio) {
+    if (hasVolume) {
+        audio.play();
+    }
 }
 
 function areArraysEqual(a, b) {
@@ -54,6 +107,7 @@ function areArraysEqual(a, b) {
 }
 
 function isSpotEmpty(coords) {
+    // Loop through the list of snake segment coords and see if any of them match the input coords
     for (const segmentCoords of snakeSegmentCoords) {
         if (areArraysEqual(segmentCoords, coords)) {
             return false;
@@ -62,28 +116,58 @@ function isSpotEmpty(coords) {
     return true;
 }
 
+// ~~ SNAKE SEGMENT DRAWING ~~
 function drawSnakeSegment(x, y) {
-    ctx.fillStyle = "#4545FF";
+    // Set canvas context fill style
+    ctx.fillStyle = SNAKE_COLOR;
+    // Draw the segment (+5 x,y offset is to center the 30x30px segment in a 40x40px spot)
     ctx.fillRect(x + 5, y + 5, 30, 30);
+    // Store the coords of the snake segment in a queue
     snakeSegmentCoords.push([x, y]);
+
+    // Small 10x30px rectangle to connect the snake segments
+    switch (direction) {
+        case "+x":
+            ctx.fillRect(x - 5, y + 5, 10, 30);
+            break;
+        case "-x":
+            ctx.fillRect(x + 35, y + 5, 10, 30);
+            break;
+        case "+y":
+            ctx.fillRect(x + 5, y - 5, 30, 10);
+            break;
+        case "-y":
+            ctx.fillRect(x + 5, y + 35, 30, 10);
+            break;
+    }
 }
 
+// ~~ APPLE DRAWING ~~
 function drawApple(x, y) {
-    ctx.fillStyle = "#ff0000";
+    // Set canvas context fill style
+    ctx.fillStyle = APPLE_COLOR;
+    // Draw the apple (+5 x,y offset is to center the 30x30px apple in a 40x40px spot)
     ctx.fillRect(x + 5, y + 5, 30, 30);
+    // Store the coords of the apple to be able to detect when the snake runs over it
     appleCoords = [x, y];
     console.log(`%c drew apple.`, "color: #00ff00");
 }
 
+// ~~ RANDOM APPLE GENERATION ~~
 function generateApple() {
+    // Possible apple coordinates
     const xPositions = [40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
     const yPositions = [40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
 
+    // Random apple coordinates
     let appleCoords = [
         xPositions[Math.floor(Math.random() * xPositions.length)],
         yPositions[Math.floor(Math.random() * yPositions.length)],
     ];
 
+    // Continue randomly generating new apple coords as long as the apple is trying to generate inside the snake
+    // Keeping track of tries is a failsafe for a rare bug (never reproduced) which otherwise causes an infinite loop here
+    // TODO: this is a horrible solution, find a better one
     let tries = 0;
     while (!isSpotEmpty(appleCoords) && tries < 1000) {
         console.log(`%c failed to draw apple, trying again.`, "color: #ff0000");
@@ -94,81 +178,68 @@ function generateApple() {
         ];
     }
 
+    // Draw the apple once an empty spot is found
     drawApple(appleCoords[0], appleCoords[1]);
 }
 
+// ~~ APPLE COLLISION DETECTION ~~
 function isAppleEaten() {
     if (areArraysEqual(snakeSegmentCoords[snakeSegmentCoords.length - 1], appleCoords)) {
         console.log(`%c ate apple.`, "color: #00ff00");
-        snakeLength++;
-        document.getElementById("scoreboard").innerHTML = `SCORE: ${++score}`;
+        playAudio(new Audio("./apple_pickup.mp3"));
+        document.getElementById("scoreboard").innerHTML = `SCORE: ${++snakeLength - 3}`;
         generateApple();
     }
 }
 
+// ~~ SNAKE COLLISION DETECTION ~~
 function checkForSnakeCollisions() {
     let collision = false;
 
-    // wall collision
-    if (
-        (headX == 640 && direction == "+x") ||
-        (headX == 0 && direction == "-x") ||
-        (headY == 560 && direction == "+y") ||
-        (headY == 0 && direction == "-y")
-    ) {
-        console.log(`%c collided with wall.`, "color: #ff0000");
-        collision = true;
+    function wallCollision() {
+        console.log(`%c wall collision.`, "color: #ff0000");
+        return true;
     }
 
-    // self collision
+    function selfCollision(futureHeadCoords, dir) {
+        for (const coords of snakeSegmentCoords) {
+            if (areArraysEqual(coords, futureHeadCoords)) {
+                console.log(`%c ${dir} self-collision.`, "color: #ff0000");
+                return true;
+            }
+        }
+        return false;
+    }
+
     switch (direction) {
         case "+x":
-            for (const segmentCoords of snakeSegmentCoords) {
-                if (areArraysEqual(segmentCoords, [headX + 40, headY])) {
-                    console.log(`%c +x collision ahead..`, "color: #ff0000");
-                    collision = true;
-                }
-            }
+            collision = headX === 640 ? wallCollision() : selfCollision([headX + 40, headY], direction);
             break;
-
         case "-x":
-            for (const segmentCoords of snakeSegmentCoords) {
-                if (areArraysEqual(segmentCoords, [headX - 40, headY])) {
-                    console.log(`%c -x collision ahead..`, "color: #ff0000");
-                    collision = true;
-                }
-            }
+            collision = headX === 0 ? wallCollision() : selfCollision([headX - 40, headY], direction);
             break;
-
         case "+y":
-            for (const segmentCoords of snakeSegmentCoords) {
-                if (areArraysEqual(segmentCoords, [headX, headY + 40])) {
-                    console.log(`%c +y collision ahead..`, "color: #ff0000");
-                    collision = true;
-                }
-            }
+            collision = headY === 560 ? wallCollision() : selfCollision([headX, headY + 40], direction);
             break;
-
         case "-y":
-            for (const segmentCoords of snakeSegmentCoords) {
-                if (areArraysEqual(segmentCoords, [headX, headY - 40])) {
-                    console.log(`%c -y collision ahead..`, "color: #ff0000");
-                    collision = true;
-                }
-            }
+            collision = headY === 0 ? wallCollision() : selfCollision([headX, headY - 40], direction);
             break;
         default:
             break;
     }
 
     if (collision) {
-        startGame = false;
+        gameIsActive = false;
     }
-
     return collision;
 }
 
+// ~~ SNAKE MOVEMENT ~~
 function moveSnake() {
+    if (direction === null) {
+        return;
+    }
+    // Update snake head coords based on current direction
     switch (direction) {
         case "+x":
             headX += 40;
@@ -184,74 +255,44 @@ function moveSnake() {
             break;
     }
 
+    // Draw new snake segment at head coords
     drawSnakeSegment(headX, headY);
+    // Check if apple was eaten (as a result of the snake moving)
     isAppleEaten();
 
+    // If the number of snake segment coordinate pairs in the queue is greater than the
+    // current snake length (variable which is incremented when an apple is eaten), shift
+    // the queue (get the coords of the snake end) and clear the canvas at those coords
     if (snakeSegmentCoords.length > snakeLength) {
         let snakeEnd = snakeSegmentCoords.shift();
         ctx.clearRect(snakeEnd[0], snakeEnd[1], 40, 40);
     }
 }
 
-function reset() {
-    snakeSegmentCoords = [];
-    appleCoords = [];
-    headX = 320;
-    headY = 280;
-    direction = null;
-    snakeLength = 3;
-    startGame = false;
-    score = 0;
-    document.getElementById("scoreboard").innerHTML = `SCORE: ${score}`;
+// ~~ HANDLE GAME OVER ~~
+function gameOver(fpsThrottle) {
+    // Play death sound
+    playAudio(new Audio("./death.mp3"));
+    // Place transparent gray overlay over the canvas
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Stop the animation loop
+    clearTimeout(fpsThrottle);
 }
 
-// ~~ PLAY AGAIN ~~
-document.getElementById("play").onclick = () => {
-    document.getElementById("menuScreen").style.zIndex = -1;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    reset();
-    initGame();
-    animationLoop();
-};
-
+// ~~ MAIN ANIMATION LOOP ~~
 function animationLoop() {
     const fpsThrottle = setTimeout(() => {
         requestAnimationFrame(animationLoop);
-        // console.log("requested anim frame");
-    }, 1000 / 8);
-
-    if (startGame) {
-        if (direction !== null && !checkForSnakeCollisions()) {
-            moveSnake();
-            // console.log(`(${headX}, ${headY})`);
+        // update snake direction
+        if (direction !== nextDirection) {
+            direction = nextDirection;
+            playAudio(new Audio("./blip.mp3"));
         }
-    } else {
-        document.getElementById("menuScreen").style.zIndex = 0;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        clearTimeout(fpsThrottle);
-        return;
-    }
+    }, 1000 / 7);
+
+    // If the game is active and there are no collisions, move the snake, otherwise end the game
+    gameIsActive && !checkForSnakeCollisions() ? moveSnake() : gameOver(fpsThrottle);
 }
 
 initGame();
-animationLoop();
-
-// function drawGrid() {
-//     let cHeight = canvas.clientHeight;
-//     let cWidth = canvas.clientWidth;
-//     ctx.strokeStyle = "white";
-
-//     // vertical lines
-//     for (let i = 1; i < 17; i++) {
-//         ctx.moveTo((cWidth / 17) * i, 0);
-//         ctx.lineTo((cWidth / 17) * i, cHeight);
-//     }
-
-//     // horizontal lines
-//     for (let i = 1; i < 15; i++) {
-//         ctx.moveTo(0, (cHeight / 15) * i);
-//         ctx.lineTo(cWidth, (cHeight / 15) * i);
-//     }
-//     ctx.stroke();
-// }

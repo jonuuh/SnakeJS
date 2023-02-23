@@ -4,22 +4,35 @@
         <meta charset="UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
         <link rel="stylesheet" href="./style.css" />
         <script type="module" src="./main.js"></script>
+        <link rel="shortcut icon" href="#" />
         <title>Snake</title>
     </head>
 
     <body>
         <div id="container">
-            <h1 id="scoreboard">SCORE: 0</h1>
+            <div id="menuBar">
+                <!-- filler element to help with layout -->
+                <span></span>
+
+                <h1 id="scoreboard">SCORE: 0</h1>
+
+                <div id="button-container">
+                    <button type="button" class="btn" id="reset">
+                        <i class="material-icons">refresh</i>
+                    </button>
+
+                    <button type="button" class="btn" id="volume">
+                        <i class="material-icons" id="volume_off">volume_off</i>
+                        <i class="material-icons" id="volume_on">volume_up</i>
+                    </button>
+                </div>
+            </div>
+
             <!-- 17x15 grid, 40px squares -->
             <canvas id="game-canvas" width="680" height="600"></canvas>
-
-            <div id="menuScreen">
-                <button type="button" id="play">
-                    <h1>PLAY AGAIN</h1>
-                </button>
-            </div>
         </div>
     </body>
 </html>
