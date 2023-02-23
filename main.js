@@ -1,9 +1,7 @@
 // ~~ GLOBAL VARIABLES ~~
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
-const audioThread1 = new Audio();
-const audioThread2 = new Audio();
-const audioThread3 = new Audio();
+const audioObjects = [new Audio(), new Audio(), new Audio()];
 const SNAKE_COLOR = "#ffffff";
 const APPLE_COLOR = "#ffffff";
 const X_POSITIONS = [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640];
@@ -98,25 +96,28 @@ document.getElementById("volume").onclick = () => {
     }
 };
 
+// ~~ AUDIO PLAYER ~~
 function playAudio(src) {
+    // Check if volume is toggled
     if (hasVolume) {
-        if (audioThread1.paused) {
-            audioThread1.src = src;
-            audioThread1.play();
-        } else if (audioThread2.paused) {
-            audioThread2.src = src;
-            audioThread2.play();
-        } else {
-            audioThread3.src = src;
-            audioThread3.play();
+        // Loop through audioObjects and find one that is paused (not currently playing),
+        // then use that object to play the input sound
+        for (const audio of audioObjects) {
+            if (audio.paused) {
+                audio.src = src;
+                audio.play();
+                break;
+            }
         }
     }
 }
 
+// ~~ ARRAY EQUALITY CHECK ~~
 function areArraysEqual(a, b) {
     return a.join() == b.join();
 }
 
+// ~~ CHECK IF A SPOT CONTAINS THE SNAKE ~~
 function isSpotEmpty(coords) {
     // Loop through the list of snake segment coords and see if any of them match the input coords
     for (const segmentCoords of snakeSegmentCoords) {
